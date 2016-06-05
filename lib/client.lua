@@ -158,21 +158,29 @@ local function storageCommand( self, cmd, key, val, exp, flg, ... )
     end
 
     -- recv
-    res, err = self.sock:recv()
-    if err then
-        return false, err;
-    elseif not res then
-        return false, 'Connection reset by peer';
-    -- "STORED\r\n"
-    elseif res:find('^STORED') then
-        return true;
-    end
+    msg = '';
+    while true do
+        res, err = self.sock:recv();
 
-    -- "NOT_STORED\r\n"
-    return false, res;
+        if err then
+            return false, err;
+        elseif not res then
+            return false, 'Connection reset by peer';
+        end
+        msg = msg .. res;
+
+        -- check response
+        if not msg:find( CRLF, 1, true ) then
+            res = nil;
+        -- "STORED\r\n"
+        elseif msg:find( '^STORED\r\n' ) then
+            return true;
+        else
+            return false, msg;
+        end
+    end
 end
 
--- storageCommand( nil, 'set', 'foo/bar/baz', 'hello world', 0, 10 )
 
 --- set
 -- @param key
